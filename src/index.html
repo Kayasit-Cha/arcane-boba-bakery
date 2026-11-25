@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🔮 ARCANE BOBA & WITCHERY BAKERY (7-DAY TYCOON)</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Mali:wght@500;700&family=Press+Start+2P&display=swap');
+
+    :root {
+      --purple-deep: #150c2e;
+      --gold: #fbbf24;
+      --text-light: #f3e8ff;
+    }
+
+    * { box-sizing: border-box; font-family: 'Mali', cursive, sans-serif; user-select: none; }
+    .pixel { font-family: 'Press Start 2P', monospace; letter-spacing: 1px; }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #1e1042 0%, #070312 100%);
+      color: var(--text-light);
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh; padding: 10px; overflow-x: hidden;
+    }
+
+    .vr-screen {
+      width: 100%; max-width: 1180px;
+      background: var(--purple-deep);
+      border: 4px solid var(--gold);
+      border-radius: 26px;
+      box-shadow: 0 0 45px rgba(168, 85, 247, 0.35);
+      overflow: hidden; display: flex; flex-direction: column; position: relative;
+    }
+
+    /* แถบ HUD ด้านบน */
+    .top-hud {
+      background: linear-gradient(90deg, #120726 0%, #241047 50%, #120726 100%);
+      border-bottom: 3px solid var(--gold);
+      padding: 9px 14px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; z-index: 30;
+    }
+    .hud-stats { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; font-size: 0.72rem; }
+    .hud-pill {
+      background: rgba(15, 7, 34, 0.9); padding: 5px 8px; border-radius: 10px;
+      border: 1.5px solid #9333ea; color: #e9d5ff; display: flex; align-items: center; gap: 4px;
+    }
+    .hud-btn {
+      border: 2px solid var(--gold); border-radius: 10px; padding: 6px 9px;
+      font-weight: 700; cursor: pointer; font-size: 0.73rem; transition: 0.12s;
+    }
+    .hud-btn:hover:not(:disabled) { box-shadow: 0 0 10px rgba(251, 191, 36, 0.5); }
+    .hud-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .shop-sign { padding: 5px 10px; border-radius: 10px; font-weight: 700; cursor: pointer; border: 2px solid #fff; font-size: 0.72rem; }
+    .shop-sign.open { background: #10b981; color: #052e16; box-shadow: 0 0 10px #34d399; }
+    .shop-sign.closed { background: #e11d48; color: #fff; box-shadow: 0 0 10px #fb7185; }
+
+    /* =========================================
+       Modal Layering (ให้หน้าต่างซื้อวัตถุดิบอยู่เหนือหน้าสรุปผลเสมอ!)
+       ========================================= */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(7, 3, 18, 0.88); backdrop-filter: blur(5px);
+      flex-direction: column; align-items: center; justify-content: center; padding: 18px;
+      overflow-y: auto;
+    }
+    #report-modal { z-index: 60; }
+    #supply-modal { z-index: 80; }
+    .modal-backdrop.active { display: flex; }
+
+    .modal-box {
+      background: linear-gradient(180deg, #241147 0%, #130829 100%);
+      border: 3px solid var(--gold);
+      border-radius: 22px;
+      padding: 18px 22px;
+      width: 100%; max-width: 760px;
+      box-shadow: 0 0 35px rgba(168, 85, 247, 0.55);
+      max-height: 92vh; overflow-y: auto;
+    }
+
+    .supply-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0;
+    }
+    .supply-card {
+      background: rgba(15, 7, 34, 0.85); border: 1.5px solid #7e22ce;
+      border-radius: 12px; padding: 8px 10px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .qty-input {
+      width: 56px; padding: 4px; border-radius: 8px; border: 2px solid #fbbf24;
+      background: #1e1042; color: #fff; font-weight: 700; text-align: center; font-size: 0.85rem;
+    }
+
+    .week-chart {
+      display: flex; align-items: flex-end; justify-content: space-around;
+      height: 115px; background: rgba(10, 4, 24, 0.8);
+      border: 1.5px solid #6b21a8; border-radius: 14px; padding: 12px 10px 6px 10px; margin: 10px 0;
+    }
+    .day-bar-col { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 12%; }
+    .day-bar {
+      width: 100%; min-height: 6px; border-radius: 6px 6px 0 0;
+      background: linear-gradient(180deg, #34d399, #059669); transition: height 0.5s ease;
+    }
+    .day-bar.loss { background: linear-gradient(180deg, #fb7185, #e11d48); }
+
+    /* =========================================
+       โซนที่ 1: โถงโต๊ะอาหารหน้าร้าน (3 โต๊ะ + ทางเดินลูกค้า)
+       ========================================= */
+    .dining-hall {
+      background:
+        radial-gradient(circle at 50% 15%, rgba(168, 85, 247, 0.25) 0%, transparent 65%),
+        linear-gradient(180deg, #0d0620 0%, #1d0f3d 70%, #14092b 100%);
+      padding: 44px 20px 14px 20px;
+      border-bottom: 4px solid var(--gold);
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .entrance-door {
+      position: absolute; top: 8px; left: 16px;
+      background: #2e1065; border: 2px solid #fbbf24; border-radius: 8px;
+      padding: 3px 10px; font-size: 0.7rem; color: #fde047; font-weight: 700; z-index: 6;
+    }
+    .order-kiosk {
+      position: absolute; top: 8px; left: 148px;
+      background: #4c1d95; border: 2px dashed #c084fc; border-radius: 8px;
+      padding: 3px 10px; font-size: 0.7rem; color: #f3e8ff; font-weight: 700; z-index: 6;
+    }
+    .floating-candles {
+      position: absolute; top: 6px; right: 20px; width: 52%;
+      display: flex; justify-content: space-around; pointer-events: none; z-index: 2;
+    }
+    .candle { display: flex; flex-direction: column; align-items: center; animation: candleFloat 2.4s infinite ease-in-out alternate; }
+    .flame { width: 7px; height: 11px; background: radial-gradient(#fff, #fbbf24 60%, #ea580c); border-radius: 50%; box-shadow: 0 0 10px #fbbf24; }
+    .wax { width: 7px; height: 18px; background: #fef3c7; border-radius: 2px; }
+    @keyframes candleFloat { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+
+    .dining-table-card {
+      background: rgba(30, 15, 62, 0.9);
+      border: 2.5px solid #7e22ce;
+      border-radius: 18px;
+      padding: 10px 12px;
+      display: flex; flex-direction: column; justify-content: space-between;
+      position: relative; min-height: 194px; z-index: 5;
+      transition: transform 0.25s, border-color 0.25s;
+    }
+    .dining-table-card.occupied { border-color: var(--gold); box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); }
+    .dining-table-card.urgent { border-color: #ef4444 !important; animation: urgentPulse 0.6s infinite alternate; }
+    @keyframes urgentPulse { from { box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); } to { box-shadow: 0 0 22px rgba(239, 68, 68, 0.9); } }
+
+    .table-header {
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1.5px dashed #6b21a8; padding-bottom: 4px; margin-bottom: 5px;
+    }
+    .type-badge { padding: 2px 7px; border-radius: 8px; font-size: 0.65rem; font-weight: 700; }
+    .type-NORMAL { background: #3b0764; color: #e9d5ff; border: 1px solid #c084fc; }
+    .type-BLENDED { background: #0c4a6e; color: #bae6fd; border: 1px solid #38bdf8; }
+    .type-BAKERY { background: #7c2d12; color: #fed7aa; border: 1px solid #fb923c; }
+
+    .patience-wrap {
+      width: 100%; height: 9px; background: #090514;
+      border: 1px solid #7e22ce; border-radius: 6px; overflow: hidden; margin: 4px 0 6px 0;
+    }
+    .patience-bar { height: 100%; width: 100%; background: #10b981; transition: width 0.25s linear, background-color 0.3s; }
+
+    .table-cust-row { display: flex; align-items: center; gap: 10px; }
+    .cust-avatar-sm { font-size: 2.5rem; animation: breathe 1.6s infinite ease-in-out; }
+    @keyframes breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    .cust-happy-jump { animation: happyJump 0.35s ease 3 !important; }
+    @keyframes happyJump { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-16px) scale(1.2); } }
+
+    .recipe-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+    .r-chip {
+      background: rgba(88, 28, 135, 0.6); border: 1px solid #d8b4fe;
+      border-radius: 7px; padding: 2px 6px; font-size: 0.7rem; font-weight: 700;
+    }
+
+    .btn-send-waiter {
+      margin-top: 8px; width: 100%;
+      background: linear-gradient(90deg, #10b981, #059669);
+      color: #052e16; border: 2px solid #a7f3d0; border-radius: 10px;
+      padding: 6px; font-weight: 700; font-size: 0.76rem; cursor: pointer; transition: 0.15s;
+    }
+    .btn-send-waiter:hover:not(:disabled) { filter: brightness(1.1); transform: scale(1.02); }
+    .btn-send-waiter:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .moving-actor {
+      position: fixed; z-index: 95; pointer-events: none;
+      display: flex; flex-direction: column; align-items: center;
+      filter: drop-shadow(0 4px 12px rgba(251, 191, 36, 0.75));
+      transition: left 0.7s cubic-bezier(0.34, 1.3, 0.64, 1), top 0.7s cubic-bezier(0.34, 1.3, 0.64, 1);
+    }
+    .actor-bob { animation: walkBob 0.22s infinite alternate ease-in-out; }
+    @keyframes walkBob { from { transform: translateY(0) rotate(-6deg); } to { transform: translateY(-9px) rotate(6deg); } }
+
+    .angry-shake { animation: angryShake 0.14s infinite linear !important; }
+    @keyframes angryShake {
+      0% { transform: translateX(-5px) rotate(-8deg); }
+      50% { transform: translateX(5px) rotate(8deg); }
+      100% { transform: translateX(-5px) rotate(-8deg); }
+    }
+
+    /* =========================================
+       โซนที่ 2: ครัวปรุงยา & ภาพวาดเมนูสำเร็จรูปเฉพาะตัว
+       ========================================= */
+    .kitchen-area {
+      background: linear-gradient(180deg, #24113d 0%, #150826 100%);
+      padding: 14px 18px 18px 18px;
+      display: grid; grid-template-columns: 1.05fr 1.15fr 1.05fr; gap: 14px; align-items: stretch;
+    }
+
+    .station-panel {
+      background: rgba(20, 10, 42, 0.85); border: 2.5px solid #6b21a8;
+      border-radius: 20px; padding: 12px; display: flex; flex-direction: column;
+    }
+    .station-title {
+      font-size: 0.82rem; font-weight: 700; color: var(--gold);
+      margin: 0 0 8px 0; padding-bottom: 5px; border-bottom: 1.5px dashed #581c87;
+    }
+
+    .ing-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+    .prop-item {
+      background: linear-gradient(180deg, #2e1752 0%, #1c0c36 100%);
+      border: 2px solid #7e22ce; border-radius: 13px; padding: 6px 7px;
+      display: flex; flex-direction: column; align-items: center; cursor: pointer;
+      position: relative; transition: 0.1s;
+    }
+    .prop-item:hover { transform: translateY(-2px); border-color: var(--gold); }
+    .prop-item:active { transform: translateY(2px); }
+    .prop-visual { font-size: 1.55rem; line-height: 1.1; }
+    .prop-label { font-weight: 700; font-size: 0.74rem; color: #fef3c7; }
+    .prop-sub { font-size: 0.62rem; color: #c084fc; }
+    .prop-stock {
+      position: absolute; top: 3px; right: 5px; background: #4c1d95;
+      border: 1px solid #c084fc; border-radius: 6px; padding: 0 4px; font-size: 0.62rem; font-weight: 700;
+    }
+    .prop-stock.low { background: #881337; border-color: #fb7185; }
+    .prop-cost {
+      position: absolute; top: 3px; left: 5px; background: #0f172a;
+      border: 1px solid #38bdf8; border-radius: 6px; padding: 0 4px; font-size: 0.58rem; color: #7dd3fc;
+    }
+
+    .workbench-center {
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.22) 0%, rgba(15, 5, 32, 0.75) 80%);
+      border: 2.5px dashed #a855f7; border-radius: 22px; padding: 12px;
+      display: flex; flex-direction: column; align-items: center; justify-content: space-between; position: relative;
+    }
+
+    .completed-dish-card {
+      width: 215px;
+      background: radial-gradient(circle, #3b1775 0%, #160936 100%);
+      border: 3px solid #fbbf24;
+      border-radius: 20px;
+      padding: 8px 10px;
+      text-align: center;
+      box-shadow: 0 0 28px rgba(251, 191, 36, 0.65), inset 0 0 15px rgba(168, 85, 247, 0.5);
+      animation: dishPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes dishPopIn { 0% { transform: scale(0.4) rotate(-8deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+    .dish-svg-wrap {
+      width: 96px; height: 96px; margin: 0 auto;
+      filter: drop-shadow(0 4px 12px rgba(255, 255, 255, 0.45));
+      animation: dishFloat 1.8s infinite ease-in-out alternate;
+    }
+    @keyframes dishFloat { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+    .dish-ready-badge {
+      display: inline-block; background: #10b981; color: #052e16;
+      font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-top: 3px;
+    }
+
+    .process-timer-box {
+      display: none; width: 100%; background: rgba(15, 7, 34, 0.95);
+      border: 2px solid #fbbf24; border-radius: 12px; padding: 6px 10px; margin-top: 6px; text-align: center;
+    }
+    .process-timer-box.active { display: block; }
+    .timer-track { width: 100%; height: 10px; background: #1e1b4b; border-radius: 6px; overflow: hidden; margin-top: 4px; border: 1px solid #a855f7; }
+    .timer-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #38bdf8, #fbbf24, #f43f5e); transition: width 0.1s linear; }
+
+    .vessel-stage { width: 220px; height: 168px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+
+    .anim-blending { animation: blenderSpin 0.12s infinite linear !important; }
+    @keyframes blenderSpin { 0% { transform: translateX(-5px) rotate(-5deg); } 50% { transform: translateX(5px) rotate(5deg); } 100% { transform: translateX(-5px) rotate(-5deg); } }
+    .anim-baking { animation: ovenGlow 0.3s infinite alternate !important; }
+    @keyframes ovenGlow { from { filter: drop-shadow(0 0 8px #f97316); transform: scale(1); } to { filter: drop-shadow(0 0 26px #ef4444); transform: scale(1.07); } }
+
+    .glass-cup {
+      width: 120px; height: 138px; border: 3px solid #e9d5ff; border-top: none;
+      border-radius: 6px 6px 32px 32px; background: rgba(255,255,255,0.1);
+      position: relative; overflow: hidden; box-shadow: 0 0 18px rgba(168, 85, 247, 0.35);
+    }
+    .liquid-body { position: absolute; bottom: 0; left: 0; right: 0; height: 0%; transition: height 0.4s ease, background 0.4s ease; z-index: 1; }
+    .blended-swirl {
+      position: absolute; inset: 0;
+      background: repeating-radial-gradient(circle, rgba(255,255,255,0.28) 0, rgba(255,255,255,0.28) 6px, transparent 6px, transparent 14px);
+      z-index: 3;
+    }
+
+    .bakery-tray {
+      width: 146px; height: 92px; background: linear-gradient(180deg, #475569, #1e293b);
+      border: 3px solid #94a3b8; border-radius: 16px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 6px 15px rgba(0,0,0,0.6);
+    }
+
+    .appliances-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; margin-top: 8px; }
+    .btn-blender {
+      background: linear-gradient(180deg, #0284c7, #0369a1); color: #e0f2fe;
+      border: 2px solid #7dd3fc; border-radius: 12px; padding: 8px; font-weight: 700; cursor: pointer; font-size: 0.76rem;
+    }
+    .btn-oven {
+      background: linear-gradient(180deg, #ea580c, #9a3412); color: #ffedd5;
+      border: 2px solid #fdba74; border-radius: 12px; padding: 8px; font-weight: 700; cursor: pointer; font-size: 0.76rem;
+    }
+    .btn-blender:disabled, .btn-oven:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .float-profit {
+      position: fixed; font-weight: 700; font-size: 1.15rem; pointer-events: none; z-index: 100;
+      text-shadow: 0 2px 8px #000; animation: floatUp 1.3s ease-out forwards;
+    }
+    @keyframes floatUp { 0% { transform: translateY(0) scale(0.8); opacity: 1; } 100% { transform: translateY(-65px) scale(1.15); opacity: 0; } }
+
+    .bottom-log {
+      background: #120726; border-top: 3px solid var(--gold);
+      padding: 8px 16px; text-align: center; font-weight: 700; color: #fde047; font-size: 0.84rem;
+    }
+
+    @media (max-width: 960px) { .dining-hall, .kitchen-area, .supply-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <div class="vr-screen">
+    <!-- Modal 1: ร้านสั่งซื้อวัตถุดิบแยกแต่ละชนิด -->
+    <div class="modal-backdrop" id="supply-modal">
+      <div class="modal-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #fbbf24; padding-bottom:8px;">
+          <h3 style="margin:0; color:#fbbf24;">🛒 ตลาดวัตถุดิบเวทมนตร์ (สั่งซื้อแยกแต่ละชนิด)</h3>
+          <button class="hud-btn" style="background:#e11d48; color:#fff;" onclick="closeSupplyModal()">✖ ปิด</button>
+        </div>
+        <p style="font-size:0.8rem; color:#e9d5ff; margin:6px 0;">
+          กรอกจำนวนที่ต้องการสั่งซื้อในแต่ละช่อง ระบบจะคำนวณยอดรวม หักเงินสด และนำไปรวมใน <b>ต้นทุนสะสม 7 วัน</b> อัตโนมัติ
+        </p>
+
+        <div class="supply-grid" id="supply-grid"></div>
+
+        <div style="background:rgba(15,7,34,0.9); border:2px solid #a855f7; border-radius:14px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div>
+            <div style="font-size:0.82rem; color:#c084fc;">เงินสดคงเหลือ: <b id="sup-wallet" style="color:#fbbf24;">250฿</b></div>
+            <div style="font-size:0.95rem; font-weight:700; color:#38bdf8;">ยอดรวมที่ต้องชำระ: <span id="sup-total">0</span>฿</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="hud-btn" style="background:#3b0764; color:#e9d5ff;" onclick="fillRecommendedCart()">✨ ใส่จำนวนตามที่ระบบแนะนำ</button>
+            <button class="hud-btn" style="background:#10b981; color:#052e16; font-size:0.88rem; padding:8px 16px;" onclick="confirmBuySupplies()">✅ ยืนยันสั่งซื้อ & หักเงิน</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: สรุปผลประกอบการประจำวัน & สรุปสัปดาห์ 7 วัน -->
+    <div class="modal-backdrop" id="report-modal">
+      <div class="modal-box">
+        <div style="text-align:center;">
+          <div style="font-size:2.8rem;" id="rep-icon">🌙</div>
+          <h2 style="color:#fbbf24; margin:4px 0;" id="rep-title">สรุปผลประกอบการประจำวันที่ 1/7</h2>
+          <p style="font-size:0.82rem; color:#e9d5ff; margin:0;" id="rep-subtitle">บัญชีรายรับ-ต้นทุน-กำไรสุทธิ และคำแนะนำการสั่งซื้อวัตถุดิบ</p>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px;">
+          <div style="background:rgba(30,15,62,0.9); border:1.5px solid #38bdf8; border-radius:14px; padding:10px;">
+            <div style="font-weight:700; color:#38bdf8; margin-bottom:4px;">📅 สรุปเฉพาะวันนี้ (Day <span id="rep-day-num">1</span>)</div>
+            <div style="font-size:0.82rem;" id="rep-daily-stats"></div>
+          </div>
+          <div style="background:rgba(6,78,59,0.55); border:1.5px solid #34d399; border-radius:14px; padding:10px;">
+            <div style="font-weight:700; color:#6ee7b7; margin-bottom:4px;">📊 ยอดสะสมทั้งสัปดาห์ (7 วัน)</div>
+            <div style="font-size:0.82rem;" id="rep-weekly-stats"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div style="font-size:0.78rem; font-weight:700; color:#fde047;">📈 กราฟการเติบโตของกำไรสุทธิทั้ง 7 วัน:</div>
+          <div class="week-chart" id="week-chart"></div>
+        </div>
+
+        <div id="growth-banner" style="display:none; background:linear-gradient(90deg, #4c1d95, #701a75); border:2px solid #fbbf24; border-radius:14px; padding:12px; margin:10px 0; text-align:center;"></div>
+
+        <div style="background:rgba(15,7,34,0.9); border:1.5px solid #f59e0b; border-radius:14px; padding:10px; margin-top:8px;">
+          <div style="font-weight:700; color:#fbbf24; font-size:0.82rem;">💡 ระบบวิเคราะห์แนะนำวัตถุดิบที่ควรสั่งซื้อเพิ่ม:</div>
+          <div id="rep-recommendations" style="font-size:0.78rem; color:#e9d5ff; margin-top:4px;"></div>
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:10px; margin-top:14px; flex-wrap:wrap;">
+          <button class="hud-btn" style="background:#fde047; color:#451a03; padding:10px 16px;" onclick="openSupplyFromReport()">
+            🛒 ไปซื้อวัตถุดิบเพิ่มก่อนเปิดร้าน
+          </button>
+          <button class="hud-btn" id="btn-next-day" style="background:#10b981; color:#052e16; font-size:0.92rem; padding:10px 22px;" onclick="proceedNextDay()">
+            🌅 เปิดร้านวันถัดไป (Day 2)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- แถบ HUD ด้านบน -->
+    <div class="top-hud">
+      <div style="display:flex; align-items:center; gap:6px;">
+        <button id="shop-sign" class="shop-sign open" onclick="triggerCloseDay()">🟢 OPEN (ปิดร้านสรุปวัน)</button>
+        <div class="hud-pill">📅 <b id="shop-day" style="color:#fbbf24;">Day 1/7</b></div>
+        <div class="hud-pill">🕯️ <b id="shop-clock" class="pixel">08:00</b></div>
+        <button id="bgm-btn" class="hud-btn" style="background:#3b0764; color:#e9d5ff;" onclick="toggleBGM()">🔇 เพลง</button>
+      </div>
+
+      <div class="hud-stats">
+        <div class="hud-pill">💰 เงินรวม: <b id="st-money" class="pixel" style="color:#fbbf24;">250฿</b></div>
+        <div class="hud-pill">📈 รายรับ: <b id="st-rev" style="color:#38bdf8;">0฿</b></div>
+        <div class="hud-pill">📉 ต้นทุน: <b id="st-cost" style="color:#fb7185;">0฿</b></div>
+        <div class="hud-pill" style="border-color:#34d399; background:rgba(6,78,59,0.7);">✨ กำไร: <b id="st-profit" style="color:#6ee7b7;">0฿</b></div>
+        <div class="hud-pill" style="border-color:#f472b6;">⭐ เครดิตร้าน: <b id="st-rep" style="color:#f9a8d4;">100%</b></div>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <button class="hud-btn" style="background:#fde047; color:#451a03;" onclick="openSupplyModal()">🛒 สั่งซื้อวัตถุดิบ</button>
+        <button class="hud-btn" style="background:#f3e8ff; color:#581c87;" onclick="gameAction('SAVE_REPORT')">📜 เซฟไฟล์</button>
+      </div>
+    </div>
+
+    <!-- โซนที่ 1: โต๊ะอาหารหน้าร้าน 3 โต๊ะ + ทางเดินลูกค้า -->
+    <div class="dining-hall" id="dining-hall">
+      <div class="entrance-door">🚪 ประตูหน้าร้าน</div>
+      <div class="order-kiosk">🛎️ จุดรับออเดอร์</div>
+      <div class="floating-candles">
+        <div class="candle"><div class="flame"></div><div class="wax"></div></div>
+        <div class="candle"><div class="flame"></div><div class="wax"></div></div>
+        <div class="candle"><div class="flame"></div><div class="wax"></div></div>
+      </div>
+    </div>
+
+    <!-- โซนที่ 2: ครัวปรุงยา & ภาพวาดเมนูสำเร็จรูปเฉพาะตัว -->
+    <div class="kitchen-area">
+      <div class="station-panel">
+        <h4 class="station-title">🧪 วัตถุดิบเครื่องดื่ม (Potions)</h4>
+        <div class="ing-grid" id="shelf-left"></div>
+      </div>
+
+      <div class="workbench-center" id="workbench-center">
+        <div style="font-size:0.78rem; font-weight:700; color:#fbbf24; text-align:center;" id="work-stage-label">
+          ✨ ขั้นตอนที่ 1: เลือกส่วนผสม
+        </div>
+
+        <div class="vessel-stage" id="vessel-stage"></div>
+
+        <div class="process-timer-box" id="process-timer-box">
+          <div style="font-size:0.74rem; font-weight:700; color:#fde047;" id="timer-label">⏳ กำลังปั่น... 2.5 วิ</div>
+          <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
+        </div>
+
+        <div id="work-summary" style="font-size:0.74rem; color:#e9d5ff; text-align:center; margin-top:4px;">
+          ภาชนะว่างเปล่า (ต้นทุน: 0฿)
+        </div>
+
+        <div class="appliances-row">
+          <button class="btn-blender" id="btn-blend" onclick="startTimedProcess('BLEND')">🌪️ เข้าเครื่องปั่น (2.5วิ)</button>
+          <button class="btn-oven" id="btn-bake" onclick="startTimedProcess('BAKE')">🔥 เข้าเตาอบ (2.5วิ)</button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; width:100%; margin-top:6px;">
+          <button class="hud-btn" id="btn-undo" style="background:#2e1065; color:#e9d5ff; border-color:#a855f7;" onclick="gameAction('UNDO')">↩️ ย้อน 1 ขั้น</button>
+          <button class="hud-btn" id="btn-clear" style="background:#2e1065; color:#e9d5ff; border-color:#a855f7;" onclick="gameAction('CLEAR')">🗑️ เททิ้งเริ่มใหม่</button>
+        </div>
+      </div>
+
+      <div class="station-panel">
+        <h4 class="station-title">🥐 ท็อปปิ้ง & วัตถุดิบเบเกอรี่</h4>
+        <div class="ing-grid" id="shelf-right"></div>
+      </div>
+    </div>
+
+    <div class="bottom-log" id="status-msg">
+      🔮 รีบเสิร์ฟก่อนลูกค้าโมโหและหักเครดิตร้าน! กดปุ่ม '🛒 สั่งซื้อวัตถุดิบ' เพื่อซื้อวัตถุดิบแยกแต่ละชนิด ✨
+    </div>
+  </div>
+
+  <script>
+    const MENU_ARTWORKS = {
+      "Thai Milk Tea": {
+        title: "ชาไทยอำพันไข่มุกทอง",
+        svg: `<svg viewBox="0 0 100 100" width="90" height="90">
+          <path d="M58 10 L66 10 L56 35 L48 35 Z" fill="#a855f7" stroke="#fde047" stroke-width="2"/>
+          <path d="M26 30 L74 30 L67 88 Q66 94 58 94 L42 94 Q34 94 33 88 Z" fill="#ea580c" stroke="#fff" stroke-width="2.5"/>
+          <path d="M27 30 L73 30 L71 48 Q50 56 29 48 Z" fill="#fef3c7" opacity="0.9"/>
+          <circle cx="40" cy="84" r="5" fill="#1c1917"/><circle cx="52" cy="86" r="5" fill="#1c1917"/><circle cx="61" cy="82" r="5" fill="#1c1917"/>
+          <ellipse cx="50" cy="30" rx="24" ry="5" fill="#fff" opacity="0.6"/>
+        </svg>`
+      },
+      "Matcha Latte": {
+        title: "มัทฉะมรกตครีมจันทรา",
+        svg: `<svg viewBox="0 0 100 100" width="90" height="90">
+          <path d="M56 10 L64 10 L55 34 L48 34 Z" fill="#15803d" stroke="#bbf7d0" stroke-width="2"/>
+          <path d="M26 30 L74 30 L67 88 Q66 94 58 94 L42 94 Q34 94 33 88 Z" fill="#22c55e" stroke="#fff" stroke-width="2.5"/>
+          <path d="M28 52 L72 52 L67 88 Q66 94 58 94 L42 94 Q34 94 33 88 Z" fill="#fef9c3" opacity="0.88"/>
+          <ellipse cx="50" cy="30" rx="24" ry="5" fill="#dcfce7"/>
+        </svg>`
+      },
+      "Brown Sugar Boba": {
+        title: "บราวน์ชูการ์ลาวาไข่มุก",
+        svg: `<svg viewBox="0 0 100 100" width="90" height="90">
+          <path d="M56 10 L64 10 L55 34 L48 34 Z" fill="#78350f" stroke="#fbbf24" stroke-width="2"/>
+          <path d="M26 30 L74 30 L67 88 Q66 94 58 94 L42 94 Q34 94 33 88 Z" fill="#fef3c7" stroke="#fff" stroke-width="2.5"/>
+          <path d="M28 45 Q42 58 31 75 L33 88 L67 88 L71 55 Q58 65 72 42 Z" fill="#92400e" opacity="0.85"/>
+          <circle cx="39" cy="85" r="5" fill="#09090b"/><circle cx="50" cy="86" r="5" fill="#09090b"/><circle cx="60" cy="84" r="5" fill="#09090b"/><circle cx="45" cy="77" r="4.5" fill="#09090b"/>
+        </svg>`
+      },
+      "Peach Smoothie": {
+        title: "สมูทตี้พีชมนตราเกล็ดหิมะ",
+        svg: `<svg viewBox="0 0 100 100" width="90" height="90">
+          <path d="M55 8 L63 8 L54 32 L47 32 Z" fill="#f43f5e" stroke="#fff" stroke-width="2"/>
+          <path d="M26 34 L74 34 L67 88 Q66 94 58 94 L42 94 Q34 94 33 88 Z" fill="#fb7185" stroke="#fff" stroke-width="2.5"/>
+          <path d="M26 34 Q35 16 50 18 Q65 16 74 34 Z" fill="#fff1f2"/>
+          <circle cx="64" cy="24" r="8" fill="#fdba74" stroke="#ea580c" stroke-width="1.5"/>
+        </svg>`
+      },
+      "Taro Frappe": {
+        title: "เผือกอเมทิสต์ปั่นเนียน",
+        svg: `<svg viewBox="0 0 100 100" width="90" height="90">
+          <path d="M55 8 L63 8 L54 32 L47 32 Z" fill="#c084fc" stroke="#fff" stroke-width="2"/>
+          <path d="M26 34 L74 34 L67 88 Q66 94 58 94 L42 94 Q34 94 33 88 Z" fill="#a855f7" stroke="#fff" stroke-width="2.5"/>
+          <path d="M26 34 Q38 14 50 16 Q62 14 74 34 Z" fill="#f3e8ff"/>
+          <polygon points="50,10 53,16 59,16 54,20 56,26 50,22 44,26 46,20 41,16 47,16" fill="#fbbf24"/>
+        </svg>`
+      },
+      "Choco Lava Croissant": {
+        title: "ครัวซองต์ช็อกโก้ลาวาอบร้อน",
+        svg: `<svg viewBox="0 0 100 100" width="90" height="90">
+          <ellipse cx="50" cy="78" rx="38" ry="11" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/>
+          <path d="M20 68 Q32 36 50 36 Q68 36 80 68 Q65 76 50 74 Q35 76 20 68 Z" fill="#d97706" stroke="#78350f" stroke-width="2.5"/>
+          <path d="M36 40 L32 68 M50 36 L50 72 M64 40 L68 68" stroke="#92400e" stroke-width="2.5"/>
+          <path d="M42 46 Q50 58 58 46 Q56 66 50 64 Q44 66 42 46 Z" fill="#451a03"/>
+        </svg>`
+      },
+      "Matcha Magic Tart": {
+        title: "ทาร์ตมัทฉะเวทมนตร์อบกรอบ",
+        svg: `<svg viewBox="0 0 100 100" width="90" height="90">
+          <ellipse cx="50" cy="78" rx="38" ry="11" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/>
+          <path d="M24 54 L76 54 L70 74 Q50 80 30 74 Z" fill="#f59e0b" stroke="#b45309" stroke-width="2.5"/>
+          <ellipse cx="50" cy="54" rx="26" ry="8" fill="#16a34a" stroke="#bbf7d0" stroke-width="2"/>
+          <circle cx="50" cy="51" r="5" fill="#fef08a"/>
+        </svg>`
+      }
+    };
+
+    const PROPS = {
+      Tea:        { icon: '🫖', th: 'น้ำชาอำพัน',      side: 'left',  grad: 'linear-gradient(180deg, #fdba74, #ea580c)' },
+      Milk:       { icon: '🥛', th: 'น้ำนมจันทรา',    side: 'left',  grad: 'linear-gradient(180deg, #fefce8, #fde68a)' },
+      Matcha:     { icon: '🍵', th: 'ผงมรกตมัทฉะ',    side: 'left',  grad: 'linear-gradient(180deg, #86efac, #15803d)' },
+      Taro:       { icon: '🔮', th: 'ครีมอเมทิสต์เผือก', side: 'left',  grad: 'linear-gradient(180deg, #e879f9, #7e22ce)' },
+      Peach:      { icon: '🍑', th: 'เนื้อมนตราพีช',   side: 'left',  grad: 'linear-gradient(180deg, #fbcfe8, #f43f5e)' },
+      Ice:        { icon: '🧊', th: 'ผลึกน้ำแข็ง',     side: 'left',  grad: null },
+      Boba:       { icon: '⚫', th: 'ไข่มุกนิลกาล',    side: 'right', grad: null },
+      BrownSugar: { icon: '🍯', th: 'น้ำผึ้งทองแดง',   side: 'right', grad: null },
+      Sugar:      { icon: '✨', th: 'ละอองน้ำเชื่อม',   side: 'right', grad: null },
+      Cocoa:      { icon: '🍫', th: 'ผงโกโก้ดาร์ก',    side: 'right', grad: null },
+      Dough:      { icon: '🥐', th: 'แป้งพายเวทมนตร์',  side: 'right', grad: null },
+      Butter:     { icon: '🧈', th: 'เนยสดสีทอง',      side: 'right', grad: null }
+    };
+
+    const AVATARS = ['🧙‍♀️', '🧙‍♂️', '🧛‍♀️', '🧝‍♀️', '🧚‍♀️', '🦉', '🧞‍♀️', '🐱‍👤'];
+    const MAX_WAIT_SEC = 43; // เพิ่มเวลาความอดทนลูกค้าเป็น 43 วินาที (+5 วินาทีจากเดิม)
+    let isShopOpen = true;
+    let isBusy = false;
+    let gameMinutes = 8 * 60;
+    let latestState = null;
+
+    let tablePatience = [100, 100, 100];
+    let prevTableSignatures = [null, null, null];
+
+    const SFX = {
+      ctx: null, bgmPlaying: false, bgmTimer: null, noteIdx: 0,
+      melody: [329.63, 493.88, 587.33, 523.25, 493.88, 659.25, 587.33, 493.88, 440.00, 392.00, 493.88, 329.63],
+      init() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      },
+      play(freq, type, dur, delay = 0, vol = 0.08) {
+        try {
+          this.init();
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime + delay);
+          gain.gain.setValueAtTime(vol, this.ctx.currentTime + delay);
+          gain.gain.exponentialRampToValueAtTime(0.0008, this.ctx.currentTime + delay + dur);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(this.ctx.currentTime + delay);
+          osc.stop(this.ctx.currentTime + delay + dur);
+        } catch (e) {}
+      },
+      pour() { this.play(520, 'sine', 0.1); this.play(780, 'sine', 0.12, 0.05); },
+      ding() { this.play(880, 'sine', 0.15, 0, 0.1); this.play(1318.5, 'sine', 0.35, 0.1, 0.1); },
+      win() { this.play(587, 'sine', 0.12, 0); this.play(740, 'sine', 0.12, 0.1); this.play(880, 'sine', 0.2, 0.2); },
+      fail() { this.play(196, 'sawtooth', 0.18, 0); this.play(146, 'sawtooth', 0.25, 0.16); },
+      footstep() { this.play(260, 'triangle', 0.05, 0, 0.04); },
+      startBGM() {
+        this.init();
+        if (this.bgmPlaying) return;
+        this.bgmPlaying = true;
+        this.bgmTimer = setInterval(() => {
+          if (!this.bgmPlaying || !isShopOpen) return;
+          const freq = this.melody[this.noteIdx % this.melody.length];
+          this.play(freq, 'sine', 0.65, 0, 0.025);
+          this.noteIdx++;
+        }, 480);
+      },
+      stopBGM() { this.bgmPlaying = false; clearInterval(this.bgmTimer); }
+    };
+
+    function toggleBGM() {
+      const btn = document.getElementById('bgm-btn');
+      if (SFX.bgmPlaying) { SFX.stopBGM(); btn.innerText = '🔇 เพลง'; }
+      else { SFX.startBGM(); btn.innerText = '🎵 เพลง'; }
+    }
+
+    // นับเวลาเปิดร้าน และลดหลอดความอดทนลูกค้า (43 วินาทีต่อโต๊ะ)
+    setInterval(() => {
+      if (!isShopOpen || isBusy || !latestState) return;
+
+      gameMinutes += 5;
+      const hh = String(Math.floor(gameMinutes / 60)).padStart(2, '0');
+      const mm = String(gameMinutes % 60).padStart(2, '0');
+      document.getElementById('shop-clock').innerText = `${hh}:${mm}`;
+
+      if (gameMinutes >= 20 * 60) {
+        triggerCloseDay();
+        return;
+      }
+
+      const dropPerSec = 100 / MAX_WAIT_SEC;
+      latestState.tables.forEach((order, idx) => {
+        if (!order) return;
+        tablePatience[idx] = Math.max(0, tablePatience[idx] - dropPerSec);
+
+        const bar = document.getElementById(`patience-bar-${idx}`);
+        const card = document.getElementById(`table-card-${idx}`);
+        const secText = document.getElementById(`patience-sec-${idx}`);
+
+        if (bar) {
+          bar.style.width = tablePatience[idx] + '%';
+          bar.style.backgroundColor = tablePatience[idx] > 50 ? '#10b981' : (tablePatience[idx] > 25 ? '#f59e0b' : '#ef4444');
+        }
+        if (secText) secText.innerText = Math.ceil((tablePatience[idx] / 100) * MAX_WAIT_SEC) + 's';
+        if (card) {
+          if (tablePatience[idx] <= 25) card.classList.add('urgent');
+          else card.classList.remove('urgent');
+        }
+
+        // เมื่อหมดเวลา ลูกค้าโกรธเดินออกจากร้าน + หักเครดิตร้าน!
+        if (tablePatience[idx] <= 0) {
+          tablePatience[idx] = 100;
+          gameAction('TIMEOUT_CUSTOMER', { table_idx: idx });
+        }
+      });
+    }, 1000);
+
+    // =========================================
+    // แอนิเมชันลูกค้าโมโหเดินออกจากร้าน + หักเครดิตร้าน
+    // =========================================
+    function animateAngryCustomerLeave(tableIdx, custName, onComplete) {
+      const tableCard = document.getElementById(`table-card-${tableIdx}`);
+      const doorRect = document.querySelector('.entrance-door').getBoundingClientRect();
+      if (!tableCard) { onComplete(); return; }
+      const startRect = tableCard.getBoundingClientRect();
+
+      SFX.fail();
+
+      // ตัวเลขเครดิตลดลอยขึ้น
+      const floatEl = document.createElement('div');
+      floatEl.className = 'float-profit';
+      floatEl.style.color = '#fb7185';
+      floatEl.style.left = (startRect.left + 45) + 'px';
+      floatEl.style.top = (startRect.top + 15) + 'px';
+      floatEl.innerText = `😡 รอนานเกินไป! เครดิตร้าน -15%`;
+      document.body.appendChild(floatEl);
+      setTimeout(() => floatEl.remove(), 1400);
+
+      // ตัวละครโมโหเดินออกจากโต๊ะกลับไปที่ประตูร้าน
+      const angryWalker = document.createElement('div');
+      angryWalker.className = 'moving-actor';
+      angryWalker.style.left = (startRect.left + 35) + 'px';
+      angryWalker.style.top = (startRect.top + 45) + 'px';
+      angryWalker.innerHTML = `
+        <div class="angry-shake" style="font-size:2.9rem;">😡💢</div>
+        <span style="background:#881337; border:1.5px solid #fb7185; color:#fff; padding:1px 7px; border-radius:8px; font-size:0.68rem; font-weight:700;">${custName} เดินออกจากร้าน!</span>
+      `;
+      document.body.appendChild(angryWalker);
+
+      requestAnimationFrame(() => {
+        angryWalker.style.left = (doorRect.left + 10) + 'px';
+        angryWalker.style.top = (doorRect.top + 35) + 'px';
+      });
+
+      setTimeout(() => {
+        angryWalker.remove();
+        onComplete();
+      }, 850);
+    }
+
+    // =========================================
+    // ระบบร้านสั่งซื้อวัตถุดิบแยกแต่ละชนิด (ลอยทับหน้าสรุปได้เสมอ)
+    // =========================================
+    function openSupplyModal(autoFillRecs = false) {
+      if (!latestState) return;
+      isShopOpen = false;
+      const grid = document.getElementById('supply-grid');
+      grid.innerHTML = '';
+
+      for (const [name, qty] of Object.entries(latestState.inventory)) {
+        const p = PROPS[name] || { icon: '✨', th: name };
+        const unitCost = latestState.costs[name] || 5;
+        const card = document.createElement('div');
+        card.className = 'supply-card';
+        card.innerHTML = `
+          <div>
+            <div style="font-weight:700; font-size:0.82rem; color:#fef3c7;">${p.icon} ${name}</div>
+            <div style="font-size:0.68rem; color:#c084fc;">คงเหลือ: <b>${qty}</b> | ราคา: <b style="color:#38bdf8;">${unitCost}฿/ชิ้น</b></div>
+          </div>
+          <input type="number" min="0" max="50" value="0" class="qty-input" id="buy-qty-${name}" data-item="${name}" data-cost="${unitCost}" oninput="recalcSupplyTotal()" />
+        `;
+        grid.appendChild(card);
+      }
+
+      document.getElementById('sup-wallet').innerText = latestState.stats.money + '฿';
+      document.getElementById('sup-total').innerText = '0';
+      document.getElementById('supply-modal').classList.add('active');
+
+      if (autoFillRecs) {
+        fillRecommendedCart();
+      }
+    }
+
+    function closeSupplyModal() {
+      document.getElementById('supply-modal').classList.remove('active');
+      if (!document.getElementById('report-modal').classList.contains('active')) {
+        isShopOpen = true;
+      }
+    }
+
+    function recalcSupplyTotal() {
+      let sum = 0;
+      document.querySelectorAll('.qty-input').forEach(inp => {
+        const q = Math.max(0, parseInt(inp.value || '0', 10));
+        const c = parseInt(inp.dataset.cost, 10);
+        sum += q * c;
+      });
+      document.getElementById('sup-total').innerText = sum;
+    }
+
+    function fillRecommendedCart() {
+      if (!latestState || !latestState.recommendations) return;
+      document.querySelectorAll('.qty-input').forEach(inp => inp.value = 0);
+      latestState.recommendations.forEach(rec => {
+        const inp = document.getElementById(`buy-qty-${rec.item}`);
+        if (inp) inp.value = rec.suggested;
+      });
+      recalcSupplyTotal();
+    }
+
+    async function confirmBuySupplies() {
+      const cart = {};
+      document.querySelectorAll('.qty-input').forEach(inp => {
+        const q = Math.max(0, parseInt(inp.value || '0', 10));
+        if (q > 0) cart[inp.dataset.item] = q;
+      });
+      await gameAction('BUY_SUPPLIES', { cart });
+      document.getElementById('sup-wallet').innerText = latestState.stats.money + '฿';
+
+      // อัปเดตรายการแนะนำในหน้าต่างสรุปวันด้วย (เผื่อเปิดมาจากหน้าสรุปวัน)
+      const recDiv = document.getElementById('rep-recommendations');
+      if (recDiv && latestState.recommendations) {
+        recDiv.innerHTML = latestState.recommendations.length === 0
+          ? '✅ สั่งซื้อวัตถุดิบเติมครบถ้วนพร้อมเปิดร้านวันถัดไปแล้ว!'
+          : latestState.recommendations.map(r => `• <b>${r.item}</b> เหลือ <b>${r.current} ชิ้น</b> → แนะนำเพิ่ม <b>${r.suggested} ชิ้น</b> (${r.est_cost}฿)`).join('<br>');
+      }
+      closeSupplyModal();
+    }
+
+    async function triggerCloseDay() {
+      isShopOpen = false;
+      const sign = document.getElementById('shop-sign');
+      sign.className = 'shop-sign closed';
+      sign.innerText = '🔴 CLOSED';
+
+      await gameAction('CLOSE_DAY');
+      const sum = latestState.day_summary;
+      if (!sum) return;
+
+      const d = sum.day_record;
+      document.getElementById('rep-day-num').innerText = d.day;
+      document.getElementById('rep-title').innerText = sum.is_week_complete
+        ? '🏆 สรุปผลประกอบการครบสัปดาห์ (7 DAYS COMPLETE!)'
+        : `🌙 สรุปผลประกอบการประจำวันที่ ${d.day}/7`;
+
+      document.getElementById('rep-daily-stats').innerHTML =
+        `• เสิร์ฟสำเร็จวันนี้: <b>${d.served} ที่</b><br>` +
+        `• รายรับวันนี้: <b style="color:#38bdf8;">${d.revenue}฿</b><br>` +
+        `• ต้นทุนวันนี้: <b style="color:#fb7185;">${d.cost}฿</b><br>` +
+        `• กำไรสุทธิวันนี้: <b style="color:#6ee7b7;">${d.profit >= 0 ? '+' : ''}${d.profit}฿</b>`;
+
+      document.getElementById('rep-weekly-stats').innerHTML =
+        `• เงินทุนตั้งต้นสัปดาห์: <b>${sum.initial_money}฿</b><br>` +
+        `• รายรับสะสม 7 วัน: <b style="color:#38bdf8;">${sum.total_revenue}฿</b><br>` +
+        `• ต้นทุนสะสม 7 วัน: <b style="color:#fb7185;">${sum.total_cost}฿</b><br>` +
+        `• เงินรวมปัจจุบัน: <b style="color:#fbbf24; font-size:0.95rem;">${sum.current_money}฿</b>`;
+
+      const chart = document.getElementById('week-chart');
+      chart.innerHTML = '';
+      const maxAbs = Math.max(100, ...sum.weekly_history.map(x => Math.abs(x.profit)));
+
+      for (let dayIdx = 1; dayIdx <= 7; dayIdx++) {
+        const rec = sum.weekly_history.find(x => x.day === dayIdx);
+        const col = document.createElement('div');
+        col.className = 'day-bar-col';
+        if (rec) {
+          const hPct = Math.max(12, Math.round((Math.abs(rec.profit) / maxAbs) * 80));
+          col.innerHTML = `
+            <span style="font-size:0.65rem; font-weight:700; color:${rec.profit >= 0 ? '#6ee7b7' : '#fb7185'};">${rec.profit}฿</span>
+            <div class="day-bar ${rec.profit < 0 ? 'loss' : ''}" style="height:${hPct}px;"></div>
+            <span style="font-size:0.68rem; color:#e9d5ff;">Day ${dayIdx}</span>
+          `;
+        } else {
+          col.innerHTML = `
+            <span style="font-size:0.62rem; color:#64748b;">-</span>
+            <div class="day-bar" style="height:6px; background:#334155;"></div>
+            <span style="font-size:0.68rem; color:#64748b;">Day ${dayIdx}</span>
+          `;
+        }
+        chart.appendChild(col);
+      }
+
+      const growthBox = document.getElementById('growth-banner');
+      growthBox.style.display = 'block';
+      if (sum.is_week_complete) {
+        const g = sum.growth_pct;
+        growthBox.innerHTML = g >= 0
+          ? `🎉 <b>ยอดเยี่ยมมาก! คุณบริหารร้านครบ 7 วันสำเร็จ!</b><br>เงินทุนของคุณเติบโตขึ้นจาก <b>${sum.initial_money}฿</b> เป็น <b>${sum.current_money}฿</b> (<span style="color:#6ee7b7; font-size:1.1rem;">เติบโต +${g}% 🚀</span>) ร้านของคุณกลายเป็นตำนานแห่งโลกเวทมนตร์แล้ว!`
+          : `✨ <b>คุณผ่านสัปดาห์แรก (7 วัน) มาได้แล้ว!</b><br>เงินรวมอยู่ที่ <b>${sum.current_money}฿</b> ลองควบคุมต้นทุนการสั่งซื้อในสัปดาห์หน้า รับรองกำไรพุ่งทะยานแน่นอน!`;
+      } else {
+        growthBox.innerHTML = `✨ <b>ความคืบหน้าสัปดาห์นี้:</b> เงินรวมเติบโต <b>${sum.growth_pct >= 0 ? '+' : ''}${sum.growth_pct}%</b> จากทุนตั้งต้น (${sum.initial_money}฿ → ${sum.current_money}฿) สู้ต่อไปเพื่อพิชิตเป้าหมายครบ 7 วัน!`;
+      }
+
+      const recDiv = document.getElementById('rep-recommendations');
+      if (sum.recommendations.length === 0) {
+        recDiv.innerHTML = '✅ สต็อกวัตถุดิบทุกชนิดยังเพียงพอสำหรับเปิดร้านวันถัดไป!';
+      } else {
+        recDiv.innerHTML = sum.recommendations.map(r =>
+          `• <b>${r.item}</b> เหลือเพียง <b>${r.current} ชิ้น</b> → แนะนำสั่งซื้อเพิ่ม <b>${r.suggested} ชิ้น</b> (งบประมาณ ${r.est_cost}฿)`
+        ).join('<br>');
+      }
+
+      const nextBtn = document.getElementById('btn-next-day');
+      nextBtn.innerText = sum.is_week_complete
+        ? '🔄 เริ่มต้นสัปดาห์ใหม่ (Week 2 - Day 1)'
+        : `🌅 เปิดร้านวันถัดไป (Day ${d.day + 1}/7)`;
+
+      document.getElementById('report-modal').classList.add('active');
+    }
+
+    function openSupplyFromReport() {
+      openSupplyModal(true);
+    }
+
+    async function proceedNextDay() {
+      document.getElementById('report-modal').classList.remove('active');
+      gameMinutes = 8 * 60;
+      document.getElementById('shop-clock').innerText = '08:00';
+      isShopOpen = true;
+      const sign = document.getElementById('shop-sign');
+      sign.className = 'shop-sign open';
+      sign.innerText = '🟢 OPEN (ปิดร้านสรุปวัน)';
+      await gameAction('NEXT_DAY');
+    }
+
+    function setControlsDisabled(disabled) {
+      isBusy = disabled;
+      document.querySelectorAll('.btn-blender, .btn-oven, #btn-undo, #btn-clear, .btn-send-waiter').forEach(b => {
+        b.disabled = disabled;
+      });
+    }
+
+    function startTimedProcess(actionType) {
+      if (!isShopOpen || isBusy) return;
+      if (!latestState || latestState.work.items.length === 0) {
+        gameAction(actionType);
+        return;
+      }
+
+      if (!SFX.bgmPlaying) toggleBGM();
+      setControlsDisabled(true);
+
+      const timerBox = document.getElementById('process-timer-box');
+      const timerLabel = document.getElementById('timer-label');
+      const timerFill = document.getElementById('timer-fill');
+      const vesselEl = document.getElementById('vessel-stage').firstElementChild;
+
+      timerBox.classList.add('active');
+      timerFill.style.width = '0%';
+
+      if (actionType === 'BLEND' && vesselEl) vesselEl.classList.add('anim-blending');
+      if (actionType === 'BAKE' && vesselEl) vesselEl.classList.add('anim-baking');
+
+      const duration = 2500;
+      const step = 100;
+      let elapsed = 0;
+
+      const interval = setInterval(() => {
+        elapsed += step;
+        const pct = Math.min(100, (elapsed / duration) * 100);
+        const remain = Math.max(0, ((duration - elapsed) / 1000)).toFixed(1);
+
+        timerFill.style.width = pct + '%';
+        timerLabel.innerText = actionType === 'BLEND'
+          ? `🌪️ กำลังปั่นละเอียด... (${remain} วินาที)`
+          : `🔥 กำลังอบในเตาเวทมนตร์... (${remain} วินาที)`;
+
+        if (elapsed % 300 === 0) {
+          if (actionType === 'BLEND') SFX.play(260 + (elapsed % 500), 'sawtooth', 0.08, 0, 0.04);
+          else SFX.play(380, 'triangle', 0.1, 0, 0.04);
+        }
+
+        if (elapsed >= duration) {
+          clearInterval(interval);
+          timerBox.classList.remove('active');
+          if (vesselEl) vesselEl.classList.remove('anim-blending', 'anim-baking');
+          SFX.ding();
+          setControlsDisabled(false);
+          gameAction(actionType);
+        }
+      }, step);
+    }
+
+    function animateCustomerWalkToTable(tableIdx, avatarIcon, custName, dishName, onArrived) {
+      const doorRect = document.querySelector('.entrance-door').getBoundingClientRect();
+      const kioskRect = document.querySelector('.order-kiosk').getBoundingClientRect();
+      const tableCard = document.getElementById(`table-card-${tableIdx}`);
+      if (!tableCard) { onArrived(); return; }
+      const targetRect = tableCard.getBoundingClientRect();
+
+      const walker = document.createElement('div');
+      walker.className = 'moving-actor';
+      walker.style.left = (doorRect.left + 10) + 'px';
+      walker.style.top = (doorRect.top + 35) + 'px';
+      walker.innerHTML = `
+        <div class="actor-bob" style="font-size:2.7rem;">${avatarIcon}</div>
+        <span style="background:#4c1d95; border:1.5px solid #fbbf24; padding:1px 7px; border-radius:8px; font-size:0.68rem; font-weight:700;">${custName} กำลังสั่ง...</span>
+      `;
+      document.body.appendChild(walker);
+      SFX.footstep();
+
+      requestAnimationFrame(() => {
+        walker.style.left = (kioskRect.left + 20) + 'px';
+        walker.style.top = (kioskRect.top + 35) + 'px';
+      });
+
+      setTimeout(() => {
+        SFX.footstep();
+        walker.innerHTML = `
+          <div class="actor-bob" style="font-size:2.7rem;">${avatarIcon}</div>
+          <span style="background:#064e3b; border:1.5px solid #6ee7b7; padding:1px 7px; border-radius:8px; font-size:0.68rem; font-weight:700;">เดินไปรอที่โต๊ะ ${tableIdx + 1}</span>
+        `;
+        walker.style.left = (targetRect.left + 35) + 'px';
+        walker.style.top = (targetRect.top + 52) + 'px';
+      }, 650);
+
+      setTimeout(() => {
+        walker.remove();
+        onArrived();
+      }, 1350);
+    }
+
+    function animateWaiterPickupAndDeliver(tableIdx, foodIcon, profitAmount, onComplete) {
+      const hallRect = document.getElementById('dining-hall').getBoundingClientRect();
+      const kitchenRect = document.getElementById('vessel-stage').getBoundingClientRect();
+      const targetTable = document.getElementById(`table-card-${tableIdx}`).getBoundingClientRect();
+
+      const waiter = document.createElement('div');
+      waiter.className = 'moving-actor';
+      waiter.style.left = (hallRect.right - 90) + 'px';
+      waiter.style.top = (hallRect.top + 30) + 'px';
+      waiter.innerHTML = `
+        <div class="actor-bob" style="font-size:2.7rem;">🧚‍♀️</div>
+        <span style="background:#064e3b; border:1.5px solid #6ee7b7; padding:1px 6px; border-radius:8px; font-size:0.66rem; font-weight:700;">มารับเมนูสำเร็จรูป...</span>
+      `;
+      document.body.appendChild(waiter);
+
+      requestAnimationFrame(() => {
+        waiter.style.left = (kitchenRect.left + 55) + 'px';
+        waiter.style.top = (kitchenRect.top + 30) + 'px';
+      });
+
+      setTimeout(() => {
+        SFX.pour();
+        waiter.innerHTML = `
+          <div class="actor-bob" style="font-size:2.7rem;">🧚‍♀️${foodIcon}</div>
+          <span style="background:#78350f; border:1.5px solid #fbbf24; padding:1px 6px; border-radius:8px; font-size:0.66rem; font-weight:700;">เสิร์ฟโต๊ะ ${tableIdx + 1}!</span>
+        `;
+        waiter.style.left = (targetTable.left + targetTable.width / 2 - 25) + 'px';
+        waiter.style.top = (targetTable.top + 45) + 'px';
+      }, 750);
+
+      setTimeout(() => {
+        SFX.win();
+        const custAv = document.querySelector(`#table-card-${tableIdx} .cust-avatar-sm`);
+        if (custAv) custAv.classList.add('cust-happy-jump');
+
+        const floatEl = document.createElement('div');
+        floatEl.className = 'float-profit';
+        floatEl.style.color = '#6ee7b7';
+        floatEl.style.left = (targetTable.left + 60) + 'px';
+        floatEl.style.top = (targetTable.top + 20) + 'px';
+        floatEl.innerText = `+${profitAmount}฿ กำไรสุทธิ! ✨`;
+        document.body.appendChild(floatEl);
+        setTimeout(() => floatEl.remove(), 1200);
+      }, 1500);
+
+      setTimeout(() => {
+        waiter.remove();
+        onComplete();
+      }, 2100);
+    }
+
+    function detectCompletedDish(work, tables) {
+      const workSet = new Set(work.items);
+      if (workSet.size === 0) return null;
+
+      for (const ord of tables) {
+        if (!ord) continue;
+        const targetSet = new Set(ord.recipe);
+        const recipeMatch = (workSet.size === targetSet.size && [...targetSet].every(x => workSet.has(x)));
+        const processMatch = (
+          (ord.type === 'NORMAL' && !work.is_blended && !work.is_baked) ||
+          (ord.type === 'BLENDED' && work.is_blended && !work.is_baked) ||
+          (ord.type === 'BAKERY' && work.is_baked && !work.is_blended)
+        );
+        if (recipeMatch && processMatch) {
+          return { name: ord.item, ...(MENU_ARTWORKS[ord.item] || { title: ord.item, svg: '' }) };
+        }
+      }
+      return null;
+    }
+
+    async function gameAction(action, payload = {}) {
+      if (isBusy) return;
+      if (!SFX.bgmPlaying && action !== 'INIT' && action !== 'TIMEOUT_CUSTOMER') toggleBGM();
+      if (action === 'ADD') SFX.pour();
+
+      const res = await fetch('/api/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...payload })
+      });
+      const state = await res.json();
+      latestState = state;
+
+      // กรณีลูกค้ารอนานจนหมดเวลา -> เล่นแอนิเมชันโมโหเดินออกจากร้าน + หักเครดิตร้าน
+      if (action === 'TIMEOUT_CUSTOMER' && state.angry_info) {
+        animateAngryCustomerLeave(payload.table_idx, state.angry_info.customer, () => {
+          render(state, true);
+        });
+        return;
+      }
+
+      if (action === 'SERVE_TABLE') {
+        if (state.served_info) {
+          setControlsDisabled(true);
+          const info = state.served_info;
+          tablePatience[payload.table_idx] = 100;
+          const foodIcon = info.type === 'BAKERY' ? '🥐' : (info.type === 'BLENDED' ? '🥤' : '🧋');
+
+          animateWaiterPickupAndDeliver(payload.table_idx, foodIcon, info.profit, () => {
+            setControlsDisabled(false);
+            render(state, true);
+          });
+          return;
+        } else {
+          SFX.fail();
+        }
+      }
+
+      render(state, action === 'NEW_CUSTOMER' || action === 'INIT' || action === 'NEXT_DAY');
+    }
+
+    function render(state, checkWalkIn = false) {
+      document.getElementById('shop-day').innerText = `Day ${state.day}/7`;
+      document.getElementById('st-money').innerText = state.stats.money + '฿';
+      document.getElementById('st-rev').innerText = state.stats.revenue + '฿';
+      document.getElementById('st-cost').innerText = state.stats.cost + '฿';
+      document.getElementById('st-profit').innerText = state.stats.profit + '฿';
+      document.getElementById('st-rep').innerText = state.stats.reputation + '%';
+      document.getElementById('status-msg').innerText = state.message;
+
+      // 1. วาดโต๊ะอาหารหน้าร้าน 3 โต๊ะ
+      const hall = document.getElementById('dining-hall');
+      const doorHTML = hall.querySelector('.entrance-door').outerHTML;
+      const kioskHTML = hall.querySelector('.order-kiosk').outerHTML;
+      const candlesHTML = hall.querySelector('.floating-candles').outerHTML;
+      hall.innerHTML = doorHTML + kioskHTML + candlesHTML;
+
+      const walkingQueues = [];
+
+      state.tables.forEach((order, idx) => {
+        const card = document.createElement('div');
+        card.id = `table-card-${idx}`;
+        card.className = 'dining-table-card' + (order ? ' occupied' : '');
+
+        if (!order) {
+          prevTableSignatures[idx] = null;
+          tablePatience[idx] = 100;
+          card.innerHTML = `
+            <div class="table-header"><b>🪑 โต๊ะ ${idx + 1} (ว่าง)</b></div>
+            <div style="text-align:center; color:#a855f7; margin:auto; font-size:0.82rem;">
+              รอรับลูกค้าใหม่...<br>
+              <button class="hud-btn" style="margin-top:8px; background:#3b0764; color:#e9d5ff;" onclick="gameAction('NEW_CUSTOMER')">🔔 เรียกลูกค้า</button>
+            </div>
+          `;
+        } else {
+          const av = AVATARS[(order.customer.charCodeAt(0) + idx) % AVATARS.length];
+          const sig = order.customer + '_' + order.item;
+          const isBrandNew = checkWalkIn && prevTableSignatures[idx] !== sig;
+          if (isBrandNew) tablePatience[idx] = 100;
+          prevTableSignatures[idx] = sig;
+
+          const typeLabel = {
+            NORMAL: '🧋 ชงปกติ',
+            BLENDED: '🌪️ เมนูปั่น (ต้องปั่น)',
+            BAKERY: '🥐 เบเกอรี่ (ต้องอบ)'
+          }[order.type];
+
+          const chips = order.recipe.map(ing => {
+            const p = PROPS[ing] || { icon: '✨' };
+            return `<span class="r-chip">${p.icon} ${ing}</span>`;
+          }).join('');
+
+          const remainSec = Math.ceil((tablePatience[idx] / 100) * MAX_WAIT_SEC);
+
+          card.innerHTML = `
+            <div id="table-content-${idx}" style="opacity:${isBrandNew ? 0 : 1}; transition: opacity 0.3s;">
+              <div class="table-header">
+                <b>🪑 โต๊ะ ${idx + 1} • ${order.customer}</b>
+                <span class="type-badge type-${order.type}">${typeLabel}</span>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:6px;">
+                <div class="patience-wrap" style="flex:1;">
+                  <div class="patience-bar" id="patience-bar-${idx}" style="width:${tablePatience[idx]}%;"></div>
+                </div>
+                <span id="patience-sec-${idx}" style="font-size:0.68rem; font-weight:700; color:#fde047;">${remainSec}s</span>
+              </div>
+
+              <div class="table-cust-row">
+                <div class="cust-avatar-sm">${av}</div>
+                <div>
+                  <div style="font-weight:700; color:#fbbf24; font-size:0.9rem;">${order.item}</div>
+                  <div style="font-size:0.7rem; color:#6ee7b7;">ขาย ${order.price}฿ | ทุน ${order.cost}฿ | กำไร +${order.profit}฿</div>
+                </div>
+              </div>
+              <div class="recipe-chips">${chips}</div>
+            </div>
+            <button class="btn-send-waiter" onclick="gameAction('SERVE_TABLE', { table_idx: ${idx} })">
+              🧚‍♀️ เรียกเด็กเสิร์ฟไปส่งโต๊ะ ${idx + 1}
+            </button>
+          `;
+
+          if (isBrandNew) walkingQueues.push({ idx, av, name: order.customer, dish: order.item });
+        }
+        hall.appendChild(card);
+      });
+
+      walkingQueues.forEach((w, i) => {
+        setTimeout(() => {
+          animateCustomerWalkToTable(w.idx, w.av, w.name, w.dish, () => {
+            const content = document.getElementById(`table-content-${w.idx}`);
+            if (content) content.style.opacity = '1';
+          });
+        }, i * 400);
+      });
+
+      // 2. วาดภาชนะตรงกลาง หรือภาพวาด SVG เมนูสำเร็จรูปเฉพาะตัว
+      const work = state.work;
+      const stage = document.getElementById('vessel-stage');
+      const label = document.getElementById('work-stage-label');
+      const completedDish = detectCompletedDish(work, state.tables);
+
+      if (completedDish) {
+        label.innerText = '🌟 ปรุงสำเร็จรูปพร้อมเสิร์ฟแล้ว!';
+        stage.innerHTML = `
+          <div class="completed-dish-card">
+            <div class="dish-svg-wrap">${completedDish.svg}</div>
+            <div style="font-weight:700; color:#fde047; font-size:0.84rem; margin-top:2px;">${completedDish.name}</div>
+            <div style="font-size:0.66rem; color:#e9d5ff;">${completedDish.title}</div>
+            <div class="dish-ready-badge">✨ READY TO SERVE</div>
+          </div>
+        `;
+      } else if (work.items.length === 0) {
+        label.innerText = '✨ ขั้นตอนที่ 1: เลือกส่วนผสมด้านซ้าย/ขวา';
+        stage.innerHTML = `<div class="glass-cup"><div class="liquid-body" style="height:0%"></div></div>`;
+      } else if (work.items.includes('Dough') || work.is_baked) {
+        label.innerText = work.is_baked
+          ? '🔥 อบสุกแล้ว! (ตรวจสอบส่วนผสมให้ครบสูตร)'
+          : '🥐 ปั้นแป้งแล้ว -> กดปุ่ม "🔥 เข้าเตาอบ (2.5วิ)"';
+        const pastryIcon = work.items.includes('Matcha') ? '🥧' : '🥐';
+        stage.innerHTML = `
+          <div class="bakery-tray">
+            <div style="font-size:3rem;">${pastryIcon}</div>
+            <div style="font-size:0.68rem; color:#fde047; font-weight:700;">
+              ${work.is_baked ? '✨ อบสุกหอมกรุ่น!' : 'แป้งดิบ (รอเข้าเตาอบ)'}
+            </div>
+          </div>`;
+      } else {
+        label.innerText = work.is_blended
+          ? '🌪️ ปั่นเนียนแล้ว! (ตรวจสอบส่วนผสมให้ครบสูตร)'
+          : '🧪 ผสมแล้ว (ถ้าเป็นเมนูปั่น กด "🌪️ เข้าเครื่องปั่น")';
+
+        let grad = 'linear-gradient(180deg, #fdba74, #ea580c)';
+        work.items.forEach(i => { if (PROPS[i] && PROPS[i].grad) grad = PROPS[i].grad; });
+        const fillH = Math.min(88, 28 + work.items.length * 16);
+
+        stage.innerHTML = `
+          <div class="glass-cup">
+            <div class="liquid-body" style="height:${fillH}%; background:${grad};">
+              ${work.is_blended ? '<div class="blended-swirl"></div>' : ''}
+            </div>
+          </div>`;
+      }
+
+      document.getElementById('work-summary').innerText = work.items.length
+        ? `${work.items.join(' + ')} (ต้นทุน: ${work.cost}฿)`
+        : 'ภาชนะว่างเปล่า (ต้นทุน: 0฿)';
+
+      // 3. ชั้นวางวัตถุดิบซ้าย-ขวา
+      const leftShelf = document.getElementById('shelf-left');
+      const rightShelf = document.getElementById('shelf-right');
+      leftShelf.innerHTML = ''; rightShelf.innerHTML = '';
+
+      for (const [name, qty] of Object.entries(state.inventory)) {
+        const p = PROPS[name] || { icon: '✨', th: name, side: 'right' };
+        const btn = document.createElement('div');
+        btn.className = 'prop-item';
+        btn.innerHTML = `
+          <span class="prop-cost">${state.costs[name] || 5}฿</span>
+          <span class="prop-stock ${qty <= 2 ? 'low' : ''}">${qty}</span>
+          <div class="prop-visual">${p.icon}</div>
+          <span class="prop-label">${name}</span>
+          <span class="prop-sub">${p.th}</span>
+        `;
+        btn.onclick = () => gameAction('ADD', { item: name });
+        (p.side === 'left' ? leftShelf : rightShelf).appendChild(btn);
+      }
+    }
+
+    gameAction('INIT');
+  </script>
+</body>
+</html>
